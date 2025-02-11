@@ -1,0 +1,9 @@
+CC,SS,USER,SITE,HOSTNAME,HOSTNAME2,HOSTKEY
+XX,AAA,hoge,MAIN,server1,サーバ１,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+XX,AAA,hoge,SUB,server1,サーバ１,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+XX,BBB,hoge,MAIN,server2,サーバ２,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+XX,BBB,hoge,SUB,server2,サーバ２,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+YY,AAA,fuga,MAIN,server3,サーバ３,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+YY,AAA,fuga,SUB,server3,サーバ３,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+YY,BBB,fuga,MAIN,server4,サーバ４,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+YY,BBB,fuga,SUB,server4,サーバ４,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

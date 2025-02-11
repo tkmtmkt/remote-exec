@@ -1,0 +1,36 @@
+# エラー発生時に中断する
+option batch abort
+# ファイル上書きの確認などを無効にする
+option confirm off
+# バイナリモードに変更
+option transfer binary
+# 除外設定
+option exclude "*.sys; *.lnk"
+
+# サーバに接続
+open %USER%:%PASS%@%HOSTNAME% -hostkey=%HOSTKEY%
+
+# 作業ディレクトリ作成
+call mkdir -p ~/.local/tmp/%WORK_DIR%/%OUT_DIR%
+
+# スクリプト配置
+cd .local/tmp/%WORK_DIR%/%OUT_DIR%
+synchronize remote in/
+
+# スクリプト実行
+call script -qafc 'sh %SCRIPT_FILE% 2>&1' %LOG_FILE%
+
+# 実行結果取得
+cd
+cd .local/tmp/%WORK_DIR%/
+synchronize local
+
+# 作業ディレクトリ削除
+cd
+call rm -r ~/.local/tmp/%WORK_DIR%
+
+# サーバから切断
+close
+
+# 終了
+exit
