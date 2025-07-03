@@ -1,21 +1,41 @@
+# 性能監視
 
 ### Excel
 
 | 項目         | 値       |
 |--------------|----------|
-| 保管フォルダ | =MID(CELL("filename",A1,1,FIND("[",CELL("filename",A1))-1))&"out"
-| 取得日       | YYYYMMDD |
+| 保管フォルダ | =MID(CELL("filename",$A$1,1,FIND("[",CELL("filename",$A$1))-1))&"out"
 | ホスト名     | hostname |
+| 取得日       | YYYYMMDD |
 
+
+### PowerQuery
+
+```
+性能監視
+|-- ヘルパークエリ
+|   |-- q_取得日のファイル一覧
+|   |-- f_テーブルに変換
+|   `-- f_データ抽出
+|-- q_メモリ使用状況
+|-- q_ロードアベレージ
+|-- q_CPU使用状況
+|-- q_HDD帯域幅使用状況
+|-- q_ネットワーク使用状況
+|-- q_ネットワークソケット使用状況
+|-- q_コンテキストスイッチ状況
+|-- q_スワップ使用状況
+`-- q_ディスク使用状況
+```
 
 #### q_取得日のファイル一覧
 
 ```powerquery
 let
-    パラメータ = Table.TransformColumn(Excel.CurrentWorkbook(){[Name="パラメータ"]}[Content],{{"値", type text}}),
+    パラメータ = Table.TransformColumn(Excel.CurrentWorkbook(){[Name="パラメータ"]}[Content], {{"値", type text}}),
     保管フォルダ = Table.SelectRows(パラメータ, each([項目] = "保管フォルダ"))[値]{0},
-    取得日 = Table.SelectRows(パラメータ, each([項目] = "取得日"))[値]{0},
     ホスト名 = Table.SelectRows(パラメータ, each([項目] = "ホスト名"))[値]{0},
+    取得日 = Table.SelectRows(パラメータ, each([項目] = "取得日"))[値]{0},
     ソース = Folder.Files(保管フォルダ)
     取得日のファイル一覧 = Table.SelectRows(ソース, each Text.Contains([Folder Path], ホスト名) and Text.Contains([Folder Path], 取得日) and [Attribute]?[Size]>0)
 in
@@ -42,8 +62,8 @@ in
 let
     データ抽出 = (処理対象ファイル名の先頭文字列 as text) =>
     let
-        処理対象ファイル一覧 = Table.SelectRows(q_取得日のファイル一覧, each Text.StartWith([Name], 処理対象ファイル名の先頭文字列)),
-        処理対象ファイル一覧_内容追加 = Table.AddCoumn(処理対象ファイル一覧, "テーブル", each f_テーブルに変換([Content])),
+        処理対象ファイル一覧 = Table.SelectRows(q_取得日のファイル一覧, each Text.StartsWith([Name], 処理対象ファイル名の先頭文字列)),
+        処理対象ファイル一覧_内容追加 = Table.AddColumn(処理対象ファイル一覧, "テーブル", each f_テーブルに変換([Content])),
         処理対象ファイル一覧_列名変更 = Table.RenameColumns(処理対象ファイル一覧_内容追加, {"Name", "Source.Name"}),
         処理対象ファイル一覧_列選択 = Table.SelectColumns(処理対象ファイル一覧_列名変更, {"Source.Name", "テーブル"}),
         テーブル = Table.ExpandTableColumn(処理対象ファイル一覧_列選択, "テーブル", Table.ColumnNames(Table.LastN(処理対象ファイル一覧_列選択, 1)[テーブル]{0})),
@@ -60,17 +80,17 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_r"),
+    ソース = f_データ抽出("sar_-r"),
     型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"kbmemfree", type number}, {"kbmemused", type number}, {"%memused", type number}, {"kbcommit", type number}, {"%commit", type number}})
 in
     型変更
 ```
 
-#### q_ロードアベレージ状況
+#### q_ロードアベレージ
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_q"),
+    ソース = f_データ抽出("sar_-q"),
     型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"runq-sz", type number}, {"plist-sz", type number}, {"ldavg-1", type number}, {"ldavg-5", type number}, {"ldavg-15", type number}, {"blocked", type number}})
 in
     型変更
@@ -80,7 +100,7 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_u"),
+    ソース = f_データ抽出("sar_-u"),
     型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"%user", type number}, {"%nice", type number}, {"%system", type number}, {"%iowait", type number}, {"%steal", type number}, {"%idle", type number}, {"CPU", Int64.Type}})
 in
     型変更
@@ -90,7 +110,7 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_dp"),
+    ソース = f_データ抽出("sar_-dp"),
     型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"DEV", type number}, {"tps", type number}, {"rkB/s", type number}, {"wkB/s", type number}, {"dkB/s", type number}, {"areq-sz", type number}, {"aqu-sz", type number}, {"await", type number}, {"%util", type number}})
 in
     型変更
@@ -100,18 +120,19 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_n_DEV"),
-    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"", type number}, {"", type number}, {"", type number}, {"", type number}, {"", type number}, {"", type number}})
+    ソース = f_データ抽出("sar_-n_DEV"),
+    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"rxpck/s", type number}, {"txpck/s", type number}, {"rxkB/s", type number}, {"txkB/s", type number}, {"rxcmp/s", type number}, {"txcmp/s", type number}, {"rxmcst/s", type number}, {"%ifutil", type number}})
+    ソート = Table.Sort(型変更, {{"timestamp", Order.Ascending}, {"IFACE", Order.Ascending}})
 in
-    型変更
+    ソート
 ```
 
 #### q_ネットワークソケット使用状況
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_n_SOCK"),
-    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"", type number}, {"", type number}, {"", type number}, {"", type number}, {"", type number}, {"", type number}})
+    ソース = f_データ抽出("sar_-n_SOCK"),
+    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"totsck", Int64.Type}, {"tcpsck", Int64.Type}, {"udpsck", Int64.Type}, {"rawsck", Int64.Type}, {"ip-frag", Int64.Type}, {"tcp-tw", Int64.Type}})
 in
     型変更
 ```
@@ -120,8 +141,8 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_w"),
-    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"", type number}, {"", type number}, {"", type number}, {"", type number}, {"", type number}, {"", type number}})
+    ソース = f_データ抽出("sar_-w"),
+    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"proc/s", type number}, {"cswch/s", type number}})
 in
     型変更
 ```
@@ -130,8 +151,8 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_S"),
-    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"kbswpfree", type number}, {"kbswpused", type number}, {"%swpused", type number}, {"kbswpcad", type number}, {"%swpcad", type number}})
+    ソース = f_データ抽出("sar_-S"),
+    型変更 = Table.TransformColumnTypes(ソース, {{"timestamp", type datetime}, {"kbswpfree", Int64.Type}, {"kbswpused", Int64.Type}, {"%swpused", type number}, {"kbswpcad", Int64.Type}, {"%swpcad", type number}})
 in
     型変更
 ```
@@ -140,7 +161,7 @@ in
 
 ```powerquery
 let
-    ソース = f_データ抽出("sar_F"),
+    ソース = f_データ抽出("sar_-F"),
     型変更 = Table.TransformColumnTypes(ソース, {{"# hostname", type text}, {"timestamp", type datetime}, {"FILESYSTEM", type text}, {"MBfsfree", Int64.Type}, {"MBfsused", Int64.Type}, {"%fsused", type number}, {"%ufsused", type number}, {"Ifree", Int64.Type}, {"Iused", Int64.Type}, {"%Iused", type number}}),
     ソート = Table.Sort(型変更, {{"timestamp", Order.Ascending}, {"FILESYSTEM", Order.Ascending}})
 in
